@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
 import { PostCard } from "@/components/blog/PostCard";
-import { TagPill } from "@/components/blog/TagPill";
 import { Input } from "@/components/ui/input";
-import { mockEntries } from "@/data/mockData";
+import {
+  getPublicEntries,
+  searchPublicEntries,
+} from "@/lib/api";
+import { EntryResponse } from "@/types/api";
 
 const allTags = [
   "all",
@@ -23,14 +27,24 @@ export default function Explore() {
   const [selectedTag, setSelectedTag] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredPosts = mockEntries.filter((post) => {
-    const matchesTag =
-      selectedTag === "all" || post.tags.includes(selectedTag);
-    const matchesSearch =
-      searchQuery === "" ||
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTag && matchesSearch;
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["exploreEntries", searchQuery],
+    queryFn: async () => {
+      const q = searchQuery.trim();
+      if (q.length > 0) {
+        // GET /api/entries/public/search
+        return await searchPublicEntries(q, 0, 30);
+      }
+      // GET /api/entries/public
+      return await getPublicEntries(0, 30);
+    },
+  });
+
+  const entries: EntryResponse[] = data?.content ?? [];
+
+  const filteredPosts = entries.filter((post) => {
+    if (selectedTag === "all") return true;
+    return post.tags.includes(selectedTag);
   });
 
   return (
@@ -75,8 +89,18 @@ export default function Explore() {
           ))}
         </div>
 
-        {/* Results */}
-        {filteredPosts.length === 0 ? (
+        {/* Loading / Error / Results */}
+        {isLoading ? (
+          <div className="text-center py-16">
+            <p className="text-lg text-muted-foreground">Loading stories...</p>
+          </div>
+        ) : isError ? (
+          <div className="text-center py-16">
+            <p className="text-lg text-destructive">
+              {(error as Error)?.message ?? "Failed to load stories."}
+            </p>
+          </div>
+        ) : filteredPosts.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-lg text-muted-foreground">
               No stories found matching your criteria.

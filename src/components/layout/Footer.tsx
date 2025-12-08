@@ -9,7 +9,7 @@ export function Footer() {
           <div className="md:col-span-2">
             <Link to="/" className="inline-block">
               <span className="font-serif text-2xl font-bold text-foreground">
-                Inkwell
+                DailyBook
               </span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground max-w-md">
@@ -86,7 +86,7 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-border">
           <p className="text-sm text-muted-foreground text-center">
-            © {new Date().getFullYear()} Inkwell. All rights reserved.
+            © {new Date().getFullYear()} DailyBook. All rights reserved.
           </p>
         </div>
       </div>

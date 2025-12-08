@@ -1,20 +1,59 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast"; // if your hook lives in /hooks, change to "@/hooks/use-toast"
+import { loginUser } from "@/lib/api";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
+
+    const formData = new FormData(e.currentTarget);
+    const username = String(formData.get("username") || "").trim();
+    const password = String(formData.get("password") || "");
+
+    if (!username || !password) {
+      toast({
+        variant: "destructive",
+        title: "Missing information",
+        description: "Please enter both username and password.",
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      // Real API call
+      await loginUser({ username, password });
+
+      // Store username for later use in UI (optional)
+      localStorage.setItem("dailybook_username", username);
+
+      toast({
+        title: "Signed in",
+        description: "Welcome back to Inkwell.",
+      });
+
+      navigate("/", { replace: true });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: err?.message ?? "Unable to sign in. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -112,7 +151,9 @@ export default function Login() {
           <blockquote className="font-serif text-2xl italic text-foreground">
             "The first draft is just you telling yourself the story."
           </blockquote>
-          <p className="mt-4 text-sm text-muted-foreground">— Terry Pratchett</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            — Terry Pratchett
+          </p>
         </div>
       </div>
     </div>

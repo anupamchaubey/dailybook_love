@@ -1,3 +1,5 @@
+// src/components/blog/AuthorCard.tsx
+
 import { Link } from "react-router-dom";
 import { UserProfileResponse } from "@/types/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -6,14 +8,23 @@ import { Button } from "@/components/ui/button";
 interface AuthorCardProps {
   author: UserProfileResponse;
   showBio?: boolean;
+  // 🔽 new prop
+  isFollowing?: boolean;
 }
 
-export function AuthorCard({ author, showBio = true }: AuthorCardProps) {
+export function AuthorCard({
+  author,
+  showBio = true,
+  isFollowing = false,
+}: AuthorCardProps) {
   return (
     <div className="flex items-start gap-4 p-4 rounded-lg bg-card border border-border">
       <Link to={`/author/${author.username}`}>
         <Avatar className="h-12 w-12">
-          <AvatarImage src={author.profilePicture || undefined} alt={author.username} />
+          <AvatarImage
+            src={author.profilePicture || undefined}
+            alt={author.username}
+          />
           <AvatarFallback className="text-lg">
             {author.username.charAt(0).toUpperCase()}
           </AvatarFallback>
@@ -32,8 +43,12 @@ export function AuthorCard({ author, showBio = true }: AuthorCardProps) {
           </p>
         )}
       </div>
-      <Button variant="outline" size="sm">
-        Follow
+      <Button
+        variant={isFollowing ? "default" : "outline"}
+        size="sm"
+        disabled={isFollowing}
+      >
+        {isFollowing ? "Following" : "Follow"}
       </Button>
     </div>
   );

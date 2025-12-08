@@ -1,20 +1,66 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast"; // adjust path if different
+import { registerUser } from "@/lib/api";
 
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
+
+    const formData = new FormData(e.currentTarget);
+    const username = String(formData.get("username") || "").trim();
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
+
+    if (!username || !email || !password) {
+      toast({
+        variant: "destructive",
+        title: "Missing information",
+        description: "Please fill in all the fields.",
+      });
+      return;
+    }
+
+    if (password.length < 8) {
+      toast({
+        variant: "destructive",
+        title: "Weak password",
+        description: "Password must be at least 8 characters long.",
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      // Backend call: returns plain text like "User registration done ..."
+      const message = await registerUser({ username, email, password });
+
+      toast({
+        title: "Account created",
+        description: message || "You can now sign in with your credentials.",
+      });
+
+      navigate("/login", { replace: true });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: err?.message ?? "Unable to create account. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const benefits = [
@@ -31,7 +77,7 @@ export default function Register() {
         <div>
           <Link to="/" className="inline-block">
             <span className="font-serif text-3xl font-bold text-foreground">
-              Inkwell
+              DailyBook
             </span>
           </Link>
         </div>
@@ -42,7 +88,10 @@ export default function Register() {
           </h2>
           <ul className="space-y-4">
             {benefits.map((benefit, index) => (
-              <li key={index} className="flex items-center gap-3 text-muted-foreground">
+              <li
+                key={index}
+                className="flex items-center gap-3 text-muted-foreground"
+              >
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
                   <Check className="h-3 w-3 text-primary" />
                 </span>
@@ -53,7 +102,7 @@ export default function Register() {
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Join thousands of writers already on Inkwell
+          Join thousands of writers already on DailyBook
         </div>
       </div>
 
@@ -71,7 +120,7 @@ export default function Register() {
             <div className="lg:hidden mb-8">
               <Link to="/">
                 <span className="font-serif text-3xl font-bold text-foreground">
-                  Inkwell
+                  DailyBook
                 </span>
               </Link>
             </div>

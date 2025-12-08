@@ -1,11 +1,21 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
 import { Layout } from "@/components/layout/Layout";
 import { PostCard } from "@/components/blog/PostCard";
 import { TagPill } from "@/components/blog/TagPill";
 import { AuthorCard } from "@/components/blog/AuthorCard";
 import { Button } from "@/components/ui/button";
-import { mockEntries, mockUsers } from "@/data/mockData";
+
+import {
+  getFeedEntries,
+  getPublicEntries,
+  getMyFollowing,
+  getStoredToken,
+  searchUsers,
+} from "@/lib/api";
+import { EntryResponse, UserProfileResponse } from "@/types/api";
 
 const popularTags = [
   "lifestyle",
@@ -17,8 +27,59 @@ const popularTags = [
 ];
 
 const Index = () => {
-  const featuredPost = mockEntries[0];
-  const recentPosts = mockEntries.slice(1);
+  // ✅ real auth state
+  const isLoggedIn = !!getStoredToken();
+  const currentUsername =
+    (typeof window !== "undefined" &&
+      localStorage.getItem("dailybook_username")) ||
+    undefined;
+
+  // POSTS
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["homeEntries"],
+    queryFn: async () => {
+      const token = getStoredToken();
+      if (token) {
+        try {
+          return await getFeedEntries(0, 20);
+        } catch {
+          // fallback if feed fails
+        }
+      }
+      return await getPublicEntries(0, 20);
+    },
+  });
+
+  const entries: EntryResponse[] = data?.content ?? [];
+  const featuredPost = entries[0];
+  const recentPosts = entries.slice(1);
+
+  // SUGGESTED WRITERS
+  const { data: suggestedUsers, isLoading: isUsersLoading } = useQuery<
+    UserProfileResponse[]
+  >({
+    queryKey: ["suggestedUsers"],
+    queryFn: async () => {
+      return await searchUsers("");
+    },
+  });
+
+  // WHO I FOLLOW (for "Following" state in cards)
+  const { data: myFollowingUsernames } = useQuery<string[]>({
+    queryKey: ["myFollowingSidebar"],
+    queryFn: getMyFollowing,
+    enabled: isLoggedIn,
+  });
+
+  const followingSet = new Set(myFollowingUsernames ?? []);
+
+  const filteredSuggestedUsers =
+    suggestedUsers?.filter((u) => u.username !== currentUsername) ?? [];
 
   return (
     <Layout>
@@ -36,16 +97,34 @@ const Index = () => {
               Share your own stories and connect with a community that values
               depth over clicks.
             </p>
+
+            {/* 🔐 Hero buttons depend on auth */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
-                <Link to="/register">
-                  Start Writing
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button variant="outline" size="lg" asChild>
-                <Link to="/explore">Explore Stories</Link>
-              </Button>
+              {isLoggedIn ? (
+                <>
+                  <Button size="lg" asChild>
+                    <Link to="/write">
+                      Write a Story
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="lg" asChild>
+                    <Link to="/explore">Explore Stories</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button size="lg" asChild>
+                    <Link to="/register">
+                      Start Writing
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="lg" asChild>
+                    <Link to="/explore">Explore Stories</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -53,20 +132,29 @@ const Index = () => {
 
       {/* Featured Post */}
       <section className="container py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-serif text-2xl font-semibold text-foreground">
-            Featured Story
-          </h2>
-        </div>
-        <div className="animate-slide-up">
+        <h2 className="font-serif text-2xl font-semibold text-foreground mb-8">
+          Featured Story
+        </h2>
+
+        {isLoading ? (
+          <p className="text-center text-muted-foreground">Loading stories...</p>
+        ) : isError ? (
+          <p className="text-center text-destructive">
+            {(error as Error)?.message ?? "Failed to load stories."}
+          </p>
+        ) : !featuredPost ? (
+          <p className="text-center text-muted-foreground">
+            No stories published yet.
+          </p>
+        ) : (
           <PostCard post={featuredPost} featured />
-        </div>
+        )}
       </section>
 
-      {/* Main Content Grid */}
+      {/* Main Grid */}
       <section className="container py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Posts List */}
+          {/* Posts list */}
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-serif text-2xl font-semibold text-foreground">
@@ -74,29 +162,33 @@ const Index = () => {
               </h2>
               <Button variant="link" asChild>
                 <Link to="/explore">
-                  View all
-                  <ArrowRight className="ml-1 h-4 w-4" />
+                  View all <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             </div>
-            <div className="divide-y divide-border">
-              {recentPosts.map((post, index) => (
-                <div
-                  key={post.id}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <PostCard post={post} />
-                </div>
-              ))}
-            </div>
+
+            {isLoading ? (
+              <p className="text-center text-muted-foreground">
+                Loading stories...
+              </p>
+            ) : recentPosts.length === 0 ? (
+              <p className="text-center text-muted-foreground">
+                No recent stories to show.
+              </p>
+            ) : (
+              <div className="divide-y divide-border">
+                {recentPosts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
           <aside className="space-y-10">
             {/* Popular Tags */}
             <div>
-              <h3 className="font-sans text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+              <h3 className="text-sm font-semibold uppercase text-muted-foreground mb-4">
                 Discover Topics
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -106,38 +198,67 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Suggested Writers */}
+            {/* Writers to follow */}
             <div>
-              <h3 className="font-sans text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+              <h3 className="text-sm font-semibold uppercase text-muted-foreground mb-4">
                 Writers to Follow
               </h3>
-              <div className="space-y-3">
-                {mockUsers.map((user) => (
-                  <AuthorCard key={user.id} author={user} />
-                ))}
-              </div>
+              {isUsersLoading ? (
+                <p className="text-muted-foreground">Loading writers...</p>
+              ) : !filteredSuggestedUsers.length ? (
+                <p className="text-muted-foreground">No writers found.</p>
+              ) : (
+                <div className="space-y-3">
+                  {filteredSuggestedUsers.slice(0, 5).map((user) => (
+                    <AuthorCard
+                      key={user.id}
+                      author={user}
+                      isFollowing={followingSet.has(user.username)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </aside>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Bottom CTA – also depends on auth */}
       <section className="border-t border-border bg-card">
         <div className="container py-16 md:py-24">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Ready to share your story?
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              Join thousands of writers who've found their voice on Inkwell.
-              It's free to get started.
-            </p>
-            <Button size="lg" asChild>
-              <Link to="/register">
-                Create Your Account
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            {isLoggedIn ? (
+              <>
+                <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground mb-4">
+                  Ready to write your next story?
+                </h2>
+                <p className="text-muted-foreground mb-8">
+                  You are signed in. Jump back into your writing flow.
+                </p>
+                <Button size="lg" asChild>
+                  <Link to="/write">
+                    Write Now
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground mb-4">
+                  Ready to share your story?
+                </h2>
+                <p className="text-muted-foreground mb-8">
+                  Join thousands of writers who have found their voice on
+                  DailyBook. It is free to get started.
+                </p>
+                <Button size="lg" asChild>
+                  <Link to="/register">
+                    Create Your Account
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>

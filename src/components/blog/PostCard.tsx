@@ -19,13 +19,21 @@ export function PostCard({ post, featured = false }: PostCardProps) {
       ? post.content.substring(0, 180) + "..."
       : post.content;
 
+  // 👇 Safely handle imageUrls possibly being null/undefined
+  const firstImage = post.imageUrls && Array.isArray(post.imageUrls)
+    ? post.imageUrls[0]
+    : undefined;
+
   if (featured) {
     return (
       <article className="group relative overflow-hidden rounded-lg bg-card shadow-md hover:shadow-hover transition-all duration-300">
-        {post.imageUrls[0] && (
-          <Link to={`/post/${post.id}`} className="block aspect-[16/9] overflow-hidden">
+        {firstImage && (
+          <Link
+            to={`/post/${post.id}`}
+            className="block aspect-[16/9] overflow-hidden"
+          >
             <img
-              src={post.imageUrls[0]}
+              src={firstImage}
               alt={post.title}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
@@ -53,7 +61,10 @@ export function PostCard({ post, featured = false }: PostCardProps) {
               className="flex items-center gap-3 group/author"
             >
               <Avatar className="h-9 w-9">
-                <AvatarImage src={post.authorProfilePicture} alt={post.authorUsername} />
+                <AvatarImage
+                  src={post.authorProfilePicture}
+                  alt={post.authorUsername}
+                />
                 <AvatarFallback>
                   {post.authorUsername.charAt(0).toUpperCase()}
                 </AvatarFallback>
@@ -79,7 +90,10 @@ export function PostCard({ post, featured = false }: PostCardProps) {
           className="flex items-center gap-2 mb-3 group/author"
         >
           <Avatar className="h-6 w-6">
-            <AvatarImage src={post.authorProfilePicture} alt={post.authorUsername} />
+            <AvatarImage
+              src={post.authorProfilePicture}
+              alt={post.authorUsername}
+            />
             <AvatarFallback>
               {post.authorUsername.charAt(0).toUpperCase()}
             </AvatarFallback>
@@ -105,13 +119,14 @@ export function PostCard({ post, featured = false }: PostCardProps) {
           )}
         </div>
       </div>
-      {post.imageUrls[0] && (
+
+      {firstImage && (
         <Link
           to={`/post/${post.id}`}
           className="shrink-0 w-28 h-28 sm:w-36 sm:h-28 overflow-hidden rounded-md"
         >
           <img
-            src={post.imageUrls[0]}
+            src={firstImage}
             alt={post.title}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />

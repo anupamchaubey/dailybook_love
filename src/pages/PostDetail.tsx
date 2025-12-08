@@ -1,25 +1,93 @@
-import { useParams, Link } from "react-router-dom";
+import { useMemo } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
-import { ArrowLeft, Share2, Bookmark, Heart } from "lucide-react";
+import { ArrowLeft, Share2, Bookmark, Heart, Trash2 } from "lucide-react";
+
 import { Layout } from "@/components/layout/Layout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { mockEntries, mockUsers } from "@/data/mockData";
 import { PostCard } from "@/components/blog/PostCard";
+import { useToast } from "@/components/ui/use-toast";
+
+import {
+  getEntryById,
+  getProfileByUsername,
+  getPublicEntries,
+  deleteEntry,
+  getStoredToken,
+} from "@/lib/api";
+import { EntryResponse, UserProfileResponse } from "@/types/api";
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
-  const post = mockEntries.find((p) => p.id === id);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  if (!post) {
+  // 1. Load the post
+  const {
+    data: post,
+    isLoading: isPostLoading,
+    isError: isPostError,
+    error: postError,
+  } = useQuery({
+    queryKey: ["post", id],
+    queryFn: async () => {
+      if (!id) throw new Error("Post id is missing.");
+      return await getEntryById(id);
+    },
+    enabled: !!id,
+  });
+
+  // 2. Load author profile once post is known
+  const authorUsername = post?.authorUsername;
+
+  const {
+    data: author,
+    isLoading: isAuthorLoading,
+  } = useQuery<UserProfileResponse>({
+    queryKey: ["authorProfile", authorUsername],
+    queryFn: async () => {
+      if (!authorUsername) throw new Error("Author username is missing.");
+      return await getProfileByUsername(authorUsername);
+    },
+    enabled: !!authorUsername,
+  });
+
+  // 3. Load some public posts for "More like this"
+  const { data: publicPage } = useQuery({
+    queryKey: ["relatedPosts"],
+    queryFn: () => getPublicEntries(0, 20),
+  });
+
+  const relatedPosts: EntryResponse[] = useMemo(() => {
+    if (!post || !publicPage) return [];
+    const tags = new Set(post.tags);
+    return publicPage.content
+      .filter((p) => p.id !== post.id && p.tags.some((t) => tags.has(t)))
+      .slice(0, 2);
+  }, [post, publicPage]);
+
+  // 4. Loading & error states
+  if (isPostLoading) {
+    return (
+      <Layout>
+        <div className="container py-24 text-center">
+          <p className="text-lg text-muted-foreground">Loading story...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (isPostError || !post) {
     return (
       <Layout>
         <div className="container py-24 text-center">
           <h1 className="font-serif text-4xl font-bold mb-4">Post not found</h1>
           <p className="text-muted-foreground mb-8">
-            The story you're looking for doesn't exist.
+            {(postError as Error)?.message ?? "The story you are looking for does not exist."}
           </p>
           <Button asChild>
             <Link to="/">Return Home</Link>
@@ -29,18 +97,69 @@ export default function PostDetail() {
     );
   }
 
-  const author = mockUsers.find((u) => u.username === post.authorUsername);
-  const relatedPosts = mockEntries
-    .filter((p) => p.id !== post.id && p.tags.some((t) => post.tags.includes(t)))
-    .slice(0, 2);
-
+  // 5. Derived display values
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: true,
   });
   const publishDate = format(new Date(post.createdAt), "MMMM d, yyyy");
-
-  // Split content into paragraphs
   const paragraphs = post.content.split("\n\n");
+
+  const currentUsername = localStorage.getItem("dailybook_username");
+  const isOwner = currentUsername && currentUsername === post.authorUsername;
+
+  const handleDelete = async () => {
+    if (!isOwner) return;
+    if (!window.confirm("Are you sure you want to delete this story?")) return;
+
+    try {
+      const token = getStoredToken();
+      if (!token) {
+        toast({
+          variant: "destructive",
+          title: "Not authenticated",
+          description: "Please sign in again to manage your posts.",
+        });
+        navigate("/login");
+        return;
+      }
+
+      await deleteEntry(post.id);
+
+      toast({
+        title: "Post deleted",
+        description: "Your story has been removed.",
+      });
+
+      navigate("/", { replace: true });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to delete",
+        description: err?.message ?? "Could not delete this story.",
+      });
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: post.title,
+          text: post.content.slice(0, 120),
+          url,
+        });
+      } catch {
+        // user cancelled, ignore
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Link copied",
+        description: "Post link copied to clipboard.",
+      });
+    }
+  };
 
   return (
     <Layout>
@@ -69,10 +188,16 @@ export default function PostDetail() {
               {post.title}
             </h1>
             <div className="flex items-center gap-4">
-              <Link to={`/author/${post.authorUsername}`} className="flex items-center gap-3 group">
+              <Link
+                to={`/author/${post.authorUsername}`}
+                className="flex items-center gap-3 group"
+              >
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={post.authorProfilePicture} alt={post.authorUsername} />
-                  <AvatarFallback>
+                  <AvatarImage
+                    src={post.authorProfilePicture}
+                    alt={post.authorUsername}
+                  />
+                <AvatarFallback>
                     {post.authorUsername.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -116,19 +241,22 @@ export default function PostDetail() {
             {/* Actions */}
             <div className="flex items-center justify-between py-8 border-t border-b border-border mt-12">
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm">
-                  <Heart className="h-4 w-4 mr-2" />
-                  Like
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <Bookmark className="h-4 w-4 mr-2" />
-                  Save
+                {isOwner && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={handleDelete}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={handleShare}>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
                 </Button>
               </div>
-              <Button variant="ghost" size="sm">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
             </div>
 
             {/* Author Bio */}
@@ -137,7 +265,10 @@ export default function PostDetail() {
                 <div className="flex items-start gap-4">
                   <Link to={`/author/${author.username}`}>
                     <Avatar className="h-16 w-16">
-                      <AvatarImage src={author.profilePicture || undefined} alt={author.username} />
+                      <AvatarImage
+                        src={author.profilePicture || undefined}
+                        alt={author.username}
+                      />
                       <AvatarFallback className="text-xl">
                         {author.username.charAt(0).toUpperCase()}
                       </AvatarFallback>
@@ -151,7 +282,8 @@ export default function PostDetail() {
                       >
                         {author.username}
                       </Link>
-                      <Button variant="outline" size="sm">
+                      {/* Follow button wiring will be added when we do follow APIs */}
+                      <Button variant="outline" size="sm" disabled={isAuthorLoading}>
                         Follow
                       </Button>
                     </div>

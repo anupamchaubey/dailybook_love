@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ImagePlus, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Visibility } from "@/types/api";
+import { Visibility, EntryRequest } from "@/types/api";
+import { useToast } from "@/components/ui/use-toast"; // adjust path if different
+import { createEntry, getStoredToken } from "@/lib/api";
 
 export default function WritePost() {
   const [title, setTitle] = useState("");
@@ -22,27 +24,73 @@ export default function WritePost() {
   const [visibility, setVisibility] = useState<Visibility>("PUBLIC");
   const [isPublishing, setIsPublishing] = useState(false);
 
-  const handleAddTag = (e: React.KeyboardEvent) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       const tag = tagInput.trim().toLowerCase();
       if (tag && !tags.includes(tag) && tags.length < 5) {
-        setTags([...tags, tag]);
+        setTags((prev) => [...prev, tag]);
         setTagInput("");
       }
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
+    setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
   };
 
   const handlePublish = async () => {
-    setIsPublishing(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsPublishing(false);
-    // Would redirect to the published post
+    const token = getStoredToken();
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "Login required",
+        description: "Please sign in to publish a story.",
+      });
+      navigate("/login");
+      return;
+    }
+
+    if (!title.trim() || !content.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Missing content",
+        description: "Title and content cannot be empty.",
+      });
+      return;
+    }
+
+    try {
+      setIsPublishing(true);
+
+      const payload: EntryRequest = {
+        title: title.trim(),
+        content: content.trim(),
+        tags,
+        visibility,
+        imageUrls: [], // hook this to your cover image upload later
+      };
+
+      const created = await createEntry(payload);
+
+      toast({
+        title: "Story published",
+        description: "Your story has been published successfully.",
+      });
+
+      navigate(`/post/${created.id}`);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to publish",
+        description: err?.message ?? "Could not publish your story.",
+      });
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -66,7 +114,7 @@ export default function WritePost() {
               onValueChange={(value: Visibility) => setVisibility(value)}
             >
               <SelectTrigger className="w-36">
-                <SelectValue />
+                <SelectValue placeholder="Visibility" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="PUBLIC">Public</SelectItem>
@@ -96,7 +144,10 @@ export default function WritePost() {
         <div className="max-w-3xl mx-auto">
           {/* Cover Image */}
           <div className="mb-8">
-            <button className="w-full h-48 rounded-lg border-2 border-dashed border-border hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground">
+            <button
+              type="button"
+              className="w-full h-48 rounded-lg border-2 border-dashed border-border hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+            >
               <ImagePlus className="h-8 w-8" />
               <span className="text-sm">Add a cover image</span>
             </button>
@@ -122,6 +173,7 @@ export default function WritePost() {
                 >
                   {tag}
                   <button
+                    type="button"
                     onClick={() => handleRemoveTag(tag)}
                     className="ml-1 hover:text-destructive"
                   >
