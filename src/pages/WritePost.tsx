@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, ChangeEvent, KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ImagePlus, X, Send } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,9 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { Visibility, EntryRequest } from "@/types/api";
-import { useToast } from "@/components/ui/use-toast"; // adjust path if different
-import { createEntry, getStoredToken } from "@/lib/api";
+import { createEntry } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function WritePost() {
   const [title, setTitle] = useState("");
@@ -24,10 +26,18 @@ export default function WritePost() {
   const [visibility, setVisibility] = useState<Visibility>("PUBLIC");
   const [isPublishing, setIsPublishing] = useState(false);
 
+  // cover image state
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // ------------------------
+  // Tag handlers
+  // ------------------------
+  const handleAddTag = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       const tag = tagInput.trim().toLowerCase();
@@ -42,26 +52,75 @@ export default function WritePost() {
     setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
   };
 
-  const handlePublish = async () => {
-    const token = getStoredToken();
-    if (!token) {
-      toast({
-        variant: "destructive",
-        title: "Login required",
-        description: "Please sign in to publish a story.",
-      });
-      navigate("/login");
-      return;
-    }
+  // ------------------------
+  // Cover image handlers
+  // ------------------------
+  const handleCoverClick = () => {
+    fileInputRef.current?.click();
+  };
 
-    if (!title.trim() || !content.trim()) {
+  const handleCoverFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingCover(true);
+
+      // ⬇️ client-side Cloudinary upload
+      // configure via environment variables
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string;
+      const uploadPreset = import.meta.env
+        .VITE_CLOUDINARY_UPLOAD_PRESET as string;
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", uploadPreset);
+
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      const data = await res.json();
+      const url = data.secure_url as string;
+
+      setCoverImageUrl(url);
       toast({
-        variant: "destructive",
-        title: "Missing content",
-        description: "Title and content cannot be empty.",
+        title: "Cover image uploaded",
+        description: "Your cover image has been added.",
       });
-      return;
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Upload failed",
+        description: "Could not upload cover image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingCover(false);
+      // reset input so the same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
+  };
+
+  const handleRemoveCover = () => {
+    setCoverImageUrl(null);
+  };
+
+  // ------------------------
+  // Publish
+  // ------------------------
+  const handlePublish = async () => {
+    if (!title.trim() || !content.trim()) return;
 
     try {
       setIsPublishing(true);
@@ -71,22 +130,23 @@ export default function WritePost() {
         content: content.trim(),
         tags,
         visibility,
-        imageUrls: [], // hook this to your cover image upload later
+        imageUrls: coverImageUrl ? [coverImageUrl] : [],
       };
 
-      const created = await createEntry(payload);
+      const entry = await createEntry(payload);
 
       toast({
         title: "Story published",
-        description: "Your story has been published successfully.",
+        description: "Your story is now live on DailyBook.",
       });
 
-      navigate(`/post/${created.id}`);
-    } catch (err: any) {
+      navigate(`/post/${entry.id}`);
+    } catch (err) {
+      console.error(err);
       toast({
+        title: "Publishing failed",
+        description: "Something went wrong while publishing your story.",
         variant: "destructive",
-        title: "Failed to publish",
-        description: err?.message ?? "Could not publish your story.",
       });
     } finally {
       setIsPublishing(false);
@@ -105,7 +165,7 @@ export default function WritePost() {
               </Link>
             </Button>
             <span className="font-serif text-xl font-bold text-foreground">
-              Inkwell
+              DailyBook
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -113,7 +173,7 @@ export default function WritePost() {
               value={visibility}
               onValueChange={(value: Visibility) => setVisibility(value)}
             >
-              <SelectTrigger className="w-36">
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder="Visibility" />
               </SelectTrigger>
               <SelectContent>
@@ -124,7 +184,9 @@ export default function WritePost() {
             </Select>
             <Button
               onClick={handlePublish}
-              disabled={!title.trim() || !content.trim() || isPublishing}
+              disabled={
+                !title.trim() || !content.trim() || isPublishing || isUploadingCover
+              }
             >
               {isPublishing ? (
                 "Publishing..."
@@ -139,6 +201,15 @@ export default function WritePost() {
         </div>
       </header>
 
+      {/* Hidden file input for cover */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleCoverFileChange}
+      />
+
       {/* Editor */}
       <main className="container py-12">
         <div className="max-w-3xl mx-auto">
@@ -146,11 +217,41 @@ export default function WritePost() {
           <div className="mb-8">
             <button
               type="button"
-              className="w-full h-48 rounded-lg border-2 border-dashed border-border hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+              onClick={handleCoverClick}
+              className="w-full h-48 rounded-lg border-2 border-dashed border-border hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground relative overflow-hidden"
             >
-              <ImagePlus className="h-8 w-8" />
-              <span className="text-sm">Add a cover image</span>
+              {coverImageUrl ? (
+                <>
+                  <img
+                    src={coverImageUrl}
+                    alt="Cover"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <span className="text-sm text-white">
+                      Click to change cover image
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <ImagePlus className="h-8 w-8" />
+                  <span className="text-sm">
+                    {isUploadingCover ? "Uploading..." : "Add a cover image"}
+                  </span>
+                </>
+              )}
             </button>
+            {coverImageUrl && (
+              <button
+                type="button"
+                onClick={handleRemoveCover}
+                className="mt-2 text-xs text-muted-foreground hover:text-destructive"
+              >
+                <X className="inline h-3 w-3 mr-1" />
+                Remove cover image
+              </button>
+            )}
           </div>
 
           {/* Title */}
