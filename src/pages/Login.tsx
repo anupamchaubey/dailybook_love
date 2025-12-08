@@ -41,7 +41,7 @@ export default function Login() {
 
       toast({
         title: "Signed in",
-        description: "Welcome back to Inkwell.",
+        description: "Welcome back to DailyBook.",
       });
 
       navigate("/", { replace: true });
@@ -71,7 +71,7 @@ export default function Login() {
             </Link>
             <Link to="/" className="block mb-8">
               <span className="font-serif text-3xl font-bold text-foreground">
-                Inkwell
+                DailyBook
               </span>
             </Link>
             <h1 className="font-serif text-2xl font-semibold text-foreground">
