@@ -41,8 +41,23 @@ const TOKEN_EXPIRES_AT_KEY = "dailybook_token_expiresAt";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  const expStr = localStorage.getItem(TOKEN_EXPIRES_AT_KEY);
+
+  if (!token || !expStr) {
+    return null;
+  }
+
+  const exp = Number(expStr);
+  if (Number.isFinite(exp) && Date.now() > exp) {
+    // Token expired → clear and treat as logged out
+    clearStoredAuth();
+    return null;
+  }
+
+  return token;
 }
+
 
 export function getStoredTokenExpiry(): number | null {
   const val = localStorage.getItem(TOKEN_EXPIRES_AT_KEY);
