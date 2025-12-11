@@ -49,7 +49,17 @@ export function getStoredToken(): string | null {
   }
 
   const exp = Number(expStr);
-  if (Number.isFinite(exp) && Date.now() > exp) {
+  if (!Number.isFinite(exp)) {
+    // bad value -> clear
+    clearStoredAuth();
+    return null;
+  }
+
+  // exp should be milliseconds since epoch. Some backends return seconds.
+  // If exp looks like seconds (smaller than 1e12), convert to ms for comparison.
+  const expMs = exp < 1e12 ? exp * 1000 : exp;
+
+  if (Date.now() > expMs) {
     // Token expired → clear and treat as logged out
     clearStoredAuth();
     return null;
@@ -66,7 +76,11 @@ export function getStoredTokenExpiry(): number | null {
 
 export function storeLogin(res: LoginResponse) {
   localStorage.setItem(TOKEN_KEY, res.token);
-  localStorage.setItem(TOKEN_EXPIRES_AT_KEY, String(res.expiresAt));
+
+  // Ensure expiresAt saved in milliseconds
+  const raw = Number(res.expiresAt);
+  const expiresAtMs = Number.isFinite(raw) ? (raw < 1e12 ? raw * 1000 : raw) : (Date.now() + 7 * 24 * 3600 * 1000);
+  localStorage.setItem(TOKEN_EXPIRES_AT_KEY, String(expiresAtMs));
 }
 
 export function clearStoredAuth() {
@@ -343,12 +357,12 @@ export async function getUserEntriesForAuthorPage(
   page = 0,
   size = 20
 ): Promise<UserEntriesResponse> {
-  // This will attach Authorization header automatically when token exists
+  // Public endpoint — don't force auth header (backend allows GET)
   return apiRequest<UserEntriesResponse>(
     `${ApiRoutes.ENTRIES_PUBLIC_USER}/${username}`,
     {
       query: { page, size },
-      auth: true, // default, but explicit for clarity
+      auth: false,
     }
   );
 }
