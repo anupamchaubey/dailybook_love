@@ -10,28 +10,24 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, featured = false }: PostCardProps) {
+  // safe defaults
+  const tags: string[] = Array.isArray(post.tags) ? post.tags : [];
+  const imageUrls: string[] = Array.isArray(post.imageUrls) ? post.imageUrls : [];
+  const contentText: string = post.content ?? "";
+  const firstImage = imageUrls[0];
+
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: true,
   });
 
   const excerpt =
-    post.content.length > 180
-      ? post.content.substring(0, 180) + "..."
-      : post.content;
-
-  // 👇 Safely handle imageUrls possibly being null/undefined
-  const firstImage = post.imageUrls && Array.isArray(post.imageUrls)
-    ? post.imageUrls[0]
-    : undefined;
+    contentText.length > 180 ? contentText.substring(0, 180) + "..." : contentText;
 
   if (featured) {
     return (
       <article className="group relative overflow-hidden rounded-lg bg-card shadow-md hover:shadow-hover transition-all duration-300">
         {firstImage && (
-          <Link
-            to={`/post/${post.id}`}
-            className="block aspect-[16/9] overflow-hidden"
-          >
+          <Link to={`/post/${post.id}`} className="block aspect-[16/9] overflow-hidden">
             <img
               src={firstImage}
               alt={post.title}
@@ -41,7 +37,7 @@ export function PostCard({ post, featured = false }: PostCardProps) {
         )}
         <div className="p-6">
           <div className="flex flex-wrap gap-2 mb-3">
-            {post.tags.slice(0, 2).map((tag) => (
+            {tags.slice(0, 2).map((tag) => (
               <Badge key={tag} variant="secondary" className="text-xs">
                 {tag}
               </Badge>
@@ -56,17 +52,11 @@ export function PostCard({ post, featured = false }: PostCardProps) {
             {excerpt}
           </p>
           <div className="flex items-center justify-between">
-            <Link
-              to={`/author/${post.authorUsername}`}
-              className="flex items-center gap-3 group/author"
-            >
+            <Link to={`/author/${post.authorUsername}`} className="flex items-center gap-3 group/author">
               <Avatar className="h-9 w-9">
-                <AvatarImage
-                  src={post.authorProfilePicture}
-                  alt={post.authorUsername}
-                />
+                <AvatarImage src={post.authorProfilePicture ?? undefined} alt={post.authorUsername} />
                 <AvatarFallback>
-                  {post.authorUsername.charAt(0).toUpperCase()}
+                  {post.authorUsername?.charAt(0).toUpperCase() ?? ""}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -85,17 +75,11 @@ export function PostCard({ post, featured = false }: PostCardProps) {
   return (
     <article className="group flex gap-6 py-6 border-b border-border last:border-b-0">
       <div className="flex-1 min-w-0">
-        <Link
-          to={`/author/${post.authorUsername}`}
-          className="flex items-center gap-2 mb-3 group/author"
-        >
+        <Link to={`/author/${post.authorUsername}`} className="flex items-center gap-2 mb-3 group/author">
           <Avatar className="h-6 w-6">
-            <AvatarImage
-              src={post.authorProfilePicture}
-              alt={post.authorUsername}
-            />
+            <AvatarImage src={post.authorProfilePicture ?? undefined} alt={post.authorUsername} />
             <AvatarFallback>
-              {post.authorUsername.charAt(0).toUpperCase()}
+              {post.authorUsername?.charAt(0).toUpperCase() ?? ""}
             </AvatarFallback>
           </Avatar>
           <span className="text-sm text-muted-foreground group-hover/author:text-foreground transition-colors">
@@ -112,19 +96,16 @@ export function PostCard({ post, featured = false }: PostCardProps) {
         </p>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span>{timeAgo}</span>
-          {post.tags[0] && (
+          {tags[0] && (
             <Badge variant="secondary" className="text-xs">
-              {post.tags[0]}
+              {tags[0]}
             </Badge>
           )}
         </div>
       </div>
 
       {firstImage && (
-        <Link
-          to={`/post/${post.id}`}
-          className="shrink-0 w-28 h-28 sm:w-36 sm:h-28 overflow-hidden rounded-md"
-        >
+        <Link to={`/post/${post.id}`} className="shrink-0 w-28 h-28 sm:w-36 sm:h-28 overflow-hidden rounded-md">
           <img
             src={firstImage}
             alt={post.title}
@@ -135,3 +116,5 @@ export function PostCard({ post, featured = false }: PostCardProps) {
     </article>
   );
 }
+
+export default PostCard;
