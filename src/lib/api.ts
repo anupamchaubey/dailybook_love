@@ -35,6 +35,7 @@ import {
 
 const TOKEN_KEY = "dailybook_token";
 const TOKEN_EXPIRES_AT_KEY = "dailybook_token_expiresAt";
+const USERNAME_KEY = "dailybook_username"; // <- added
 
 // Adjust base URL according to your setup.
 // If you are proxying /api from Vite to Spring Boot, this can stay as "".
@@ -81,11 +82,26 @@ export function storeLogin(res: LoginResponse) {
   const raw = Number(res.expiresAt);
   const expiresAtMs = Number.isFinite(raw) ? (raw < 1e12 ? raw * 1000 : raw) : (Date.now() + 7 * 24 * 3600 * 1000);
   localStorage.setItem(TOKEN_EXPIRES_AT_KEY, String(expiresAtMs));
+
+  // store username for other parts of the UI that rely on it
+  // (login response is expected to include username)
+  // protect against undefined by only setting when present
+  // @ts-ignore - LoginResponse may include username
+  if ((res as any).username) {
+    // @ts-ignore
+    localStorage.setItem(USERNAME_KEY, (res as any).username);
+  }
 }
 
 export function clearStoredAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(TOKEN_EXPIRES_AT_KEY);
+  localStorage.removeItem(USERNAME_KEY);
+}
+
+// convenience accessor for username
+export function getStoredUsername(): string | null {
+  return localStorage.getItem(USERNAME_KEY);
 }
 
 // ============================
@@ -174,7 +190,7 @@ export async function registerUser(
   return apiRequest<string>(ApiRoutes.REGISTER, {
     method: "POST",
     body: payload,
-    auth: true,
+    auth: false, // registration should not require auth
     expect: "text",
   });
 }
@@ -188,7 +204,7 @@ export async function loginUser(
     auth: false,
     expect: "json",
   });
-  // Persist token
+  // Persist token + username (if returned)
   storeLogin(res);
   return res;
 }
@@ -357,16 +373,15 @@ export async function getUserEntriesForAuthorPage(
   page = 0,
   size = 20
 ): Promise<UserEntriesResponse> {
-  // Public endpoint — don't force auth header (backend allows GET)
+  // send auth header so backend can return FOLLOWERS_ONLY posts for approved followers
   return apiRequest<UserEntriesResponse>(
     `${ApiRoutes.ENTRIES_PUBLIC_USER}/${username}`,
     {
       query: { page, size },
-      auth: false,
+      auth: true,
     }
   );
 }
-
 
 // ============================
 // 6. Profile APIs
