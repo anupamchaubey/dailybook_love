@@ -174,7 +174,7 @@ export async function registerUser(
   return apiRequest<string>(ApiRoutes.REGISTER, {
     method: "POST",
     body: payload,
-    auth: false,
+    auth: true,
     expect: "text",
   });
 }
