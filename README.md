@@ -1,73 +1,82 @@
-# Welcome to your Lovable project
+# DailyBook — Frontend
 
-## Project info
+Frontend client for **DailyBook**, a social blogging platform that supports user authentication, post visibility control, social following, and notifications.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+This repository focuses on consuming backend APIs and providing a clean, functional user interface.  
+The primary engineering emphasis of the project lies in the backend system.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
 
-**Use Lovable**
+## ✨ Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- User authentication (JWT-based)
+- Personalized feed for followed users
+- Follow / unfollow users
+- Notifications UI
+- User profile management
+- Tag-based filtering and search
+- Cloud-hosted image support
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## 🧩 Tech Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- React
+- TypeScript
+- Vite
+- TanStack React Query
+- Tailwind CSS / Shadcn UI
+- Lucide Icons
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 🔗 Backend Integration
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+This frontend consumes REST APIs provided by the **DailyBook Backend**.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Backend repository:  
+➡️ https://github.com/anupamchaubey/Daily-Book
 
-# Step 3: Install the necessary dependencies.
-npm i
+Ensure the backend service is running before starting the frontend.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+---
+
+## ⚙️ Environment Configuration
+
+Create a `.env` file in the root directory:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080
 ```
 
-**Edit a file directly in GitHub**
+## 🚀 Running Locally
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm install
+npm run dev
 
-**Use GitHub Codespaces**
+```
+The application will be available at:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+http://localhost:5173
 
-## What technologies are used for this project?
+## 🎯 Project Focus
 
-This project is built with:
+This frontend is intentionally lightweight and designed to:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- Integrate cleanly with backend APIs
+- Demonstrate authentication and authorization flows
+- Provide a usable interface for testing backend functionality
 
-## How can I deploy this project?
+Complex business logic, security, and access control are handled entirely by the backend.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 📄 License
 
-## Can I connect a custom domain to my Lovable project?
+This project is licensed under the MIT License.
 
-Yes, you can!
+## 👤 Author
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Anupam**  
+B.Tech CSE  
+Backend / SDE Aspirant
