@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, Bell, PenSquare, Menu, X, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { getStoredToken, clearStoredAuth } from "@/lib/api";
 
@@ -17,8 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Header() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -81,42 +78,6 @@ export function Header() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
-          {/* Search */}
-          <div className="relative">
-            <div
-              className={cn(
-                "flex items-center transition-all duration-300",
-                isSearchOpen ? "w-64" : "w-10"
-              )}
-            >
-              {isSearchOpen && (
-  <Input
-    type="search"
-    placeholder="Search stories..."
-    className="h-10 pr-10 animate-fade-in"
-    autoFocus
-    value={searchQuery}
-    onChange={(e) => setSearchQuery(e.target.value)}
-    onKeyDown={(e) => {
-      if (e.key === "Enter" && searchQuery.trim()) {
-        navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-        setIsSearchOpen(false);
-      }
-    }}
-    onBlur={() => setIsSearchOpen(false)}
-  />
-)}
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn("shrink-0", isSearchOpen && "absolute right-0")}
-                onClick={() => setIsSearchOpen(!isSearchOpen)}
-              >
-                <Search className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
 
           {isLoggedIn ? (
             <>
@@ -211,23 +172,7 @@ export function Header() {
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-background animate-slide-down">
           <div className="container py-4 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-  type="search"
-  placeholder="Search stories..."
-  className="pl-10"
-  value={searchQuery}
-  onChange={(e) => setSearchQuery(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter" && searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setIsMobileMenuOpen(false);
-    }
-  }}
-/>
-
-            </div>
+            
             <nav className="flex flex-col gap-2">
               <Link
                 to="/"
