@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Header() {
+  const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -89,14 +90,23 @@ export function Header() {
               )}
             >
               {isSearchOpen && (
-                <Input
-                  type="search"
-                  placeholder="Search stories..."
-                  className="h-10 pr-10 animate-fade-in"
-                  autoFocus
-                  onBlur={() => setIsSearchOpen(false)}
-                />
-              )}
+  <Input
+    type="search"
+    placeholder="Search stories..."
+    className="h-10 pr-10 animate-fade-in"
+    autoFocus
+    value={searchQuery}
+    onChange={(e) => setSearchQuery(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" && searchQuery.trim()) {
+        navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        setIsSearchOpen(false);
+      }
+    }}
+    onBlur={() => setIsSearchOpen(false)}
+  />
+)}
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -204,10 +214,19 @@ export function Header() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                type="search"
-                placeholder="Search stories..."
-                className="pl-10"
-              />
+  type="search"
+  placeholder="Search stories..."
+  className="pl-10"
+  value={searchQuery}
+  onChange={(e) => setSearchQuery(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsMobileMenuOpen(false);
+    }
+  }}
+/>
+
             </div>
             <nav className="flex flex-col gap-2">
               <Link
