@@ -264,9 +264,10 @@ export async function searchPublicEntries(
 ): Promise<SearchEntriesResponse> {
   return apiRequest<SearchEntriesResponse>(
     ApiRoutes.ENTRIES_PUBLIC_SEARCH,
-    { query: { query: queryStr, page, size } }
+    { query: { q: queryStr, page, size } }
   );
 }
+
 
 export async function getFeedEntries(
   page = 0,

@@ -28,7 +28,8 @@ export default function Explore() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["exploreEntries", searchQuery],
+    queryKey: ["exploreEntries", searchQuery, selectedTag],
+
     queryFn: async () => {
       const q = searchQuery.trim();
       if (q.length > 0) {
