@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
@@ -29,24 +29,31 @@ export default function Explore() {
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["exploreEntries", searchQuery, selectedTag],
-
     queryFn: async () => {
       const q = searchQuery.trim();
       if (q.length > 0) {
-        // GET /api/entries/public/search
-        return await searchPublicEntries(q, 0, 30);
+        return searchPublicEntries(q, 0, 30);
       }
-      // GET /api/entries/public
-      return await getPublicEntries(0, 30);
+      return getPublicEntries(0, 30);
     },
   });
 
   const entries: EntryResponse[] = data?.content ?? [];
 
-  const filteredPosts = entries.filter((post) => {
-    if (selectedTag === "all") return true;
-    return post.tags.includes(selectedTag);
-  });
+  /**
+   * 1️⃣ Filter by tag (client-side)
+   * 2️⃣ Deduplicate by post.id (defensive UI safety)
+   */
+  const visiblePosts = useMemo(() => {
+    const filtered =
+      selectedTag === "all"
+        ? entries
+        : entries.filter((post) => post.tags.includes(selectedTag));
+
+    return Array.from(
+      new Map(filtered.map((post) => [post.id, post])).values()
+    );
+  }, [entries, selectedTag]);
 
   return (
     <Layout>
@@ -69,11 +76,14 @@ export default function Explore() {
             placeholder="Search stories..."
             className="pl-10"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSelectedTag("all"); // 🔑 prevent search+tag conflicts
+            }}
           />
         </div>
 
-        {/* Tags Filter */}
+        {/* Tags */}
         <div className="flex flex-wrap gap-2 mb-10 pb-8 border-b border-border">
           {allTags.map((tag) => (
             <button
@@ -90,7 +100,7 @@ export default function Explore() {
           ))}
         </div>
 
-        {/* Loading / Error / Results */}
+        {/* States */}
         {isLoading ? (
           <div className="text-center py-16">
             <p className="text-lg text-muted-foreground">Loading stories...</p>
@@ -101,7 +111,7 @@ export default function Explore() {
               {(error as Error)?.message ?? "Failed to load stories."}
             </p>
           </div>
-        ) : filteredPosts.length === 0 ? (
+        ) : visiblePosts.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-lg text-muted-foreground">
               No stories found matching your criteria.
@@ -109,7 +119,7 @@ export default function Explore() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredPosts.map((post, index) => (
+            {visiblePosts.map((post, index) => (
               <div
                 key={post.id}
                 className="animate-slide-up"
