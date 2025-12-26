@@ -21,7 +21,7 @@ export function PostCard({ post, featured = false }: PostCardProps) {
   });
 
   const excerpt =
-    contentText.length > 180 ? contentText.substring(0, 180) + "..." : contentText;
+    contentText.length > 50 ? contentText.substring(0, 100) + "..." : contentText;
 
   if (featured) {
     return (

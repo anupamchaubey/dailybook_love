@@ -12,7 +12,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import WritePost from "./pages/WritePost";
 import NotFound from "./pages/NotFound";
-
+import License from "./pages/License";
 // 🔽 NEW pages
 import MyPosts from "./pages/MyPosts";
 import Followers from "./pages/Followers";
@@ -45,7 +45,7 @@ const App = () => (
           <Route path="/follow-requests" element={<FollowRequests />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-
+          <Route path="/license" element={<License />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

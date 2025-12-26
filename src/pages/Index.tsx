@@ -131,7 +131,7 @@ const Index = () => {
       </section>
 
       {/* Featured Post */}
-      <section className="container py-12">
+      <section id="featured-story" className="container py-12">
         <h2 className="font-serif text-2xl font-semibold text-foreground mb-8">
           Featured Story
         </h2>

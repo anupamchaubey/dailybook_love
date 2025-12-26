@@ -21,7 +21,7 @@ export function Footer() {
           {/* Links */}
           <div>
             <h4 className="font-sans text-sm font-semibold text-foreground mb-4">
-              Explore
+              Search
             </h4>
             <ul className="space-y-3">
               <li>
@@ -32,14 +32,7 @@ export function Footer() {
                   Home
                 </Link>
               </li>
-              <li>
-                <Link
-                  to="/explore"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Popular Stories
-                </Link>
-              </li>
+              
               <li>
                 <Link
                   to="/explore"
@@ -48,38 +41,55 @@ export function Footer() {
                   Topics
                 </Link>
               </li>
+
+              <li>
+                <a
+  href="/#featured-story"
+  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+>
+  Featured Story
+</a>
+
+              </li>
             </ul>
           </div>
+          
 
           <div>
             <h4 className="font-sans text-sm font-semibold text-foreground mb-4">
-              Company
+              About
             </h4>
             <ul className="space-y-3">
               <li>
-                <Link
-                  to="/about"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  About
-                </Link>
-              </li>
+      <a
+        href="https://anupamchaubey.github.io/Portfolio/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        Owner
+      </a>
+    </li>
               <li>
-                <Link
-                  to="/privacy"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Privacy
-                </Link>
-              </li>
+  <Link
+    to="/license"
+    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+  >
+    License
+  </Link>
+</li>
+
               <li>
-                <Link
-                  to="/terms"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Terms
-                </Link>
-              </li>
+  <a
+    href="https://github.com/anupamchaubey?tab=repositories"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+  >
+    Other Projects
+  </a>
+</li>
+
             </ul>
           </div>
         </div>
