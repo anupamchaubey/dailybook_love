@@ -416,3 +416,13 @@ export async function searchUsers(
     query: { query: queryStr },
   });
 }
+
+import { UserProfileResponse } from "@/types/api";
+
+export async function getSuggestedUsers(): Promise<UserProfileResponse[]> {
+  return apiRequest<UserProfileResponse[]>(
+    "/api/public/users/suggested",
+    { auth: true }
+  );
+}
+

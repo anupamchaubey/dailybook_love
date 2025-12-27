@@ -13,7 +13,7 @@ import {
   getPublicEntries,
   getMyFollowing,
   getStoredToken,
-  searchUsers,
+  getSuggestedUsers,
 } from "@/lib/api";
 import { EntryResponse, UserProfileResponse } from "@/types/api";
 
@@ -61,13 +61,13 @@ const Index = () => {
 
   // SUGGESTED WRITERS
   const { data: suggestedUsers, isLoading: isUsersLoading } = useQuery<
-    UserProfileResponse[]
-  >({
-    queryKey: ["suggestedUsers"],
-    queryFn: async () => {
-      return await searchUsers("");
-    },
-  });
+  UserProfileResponse[]
+>({
+  queryKey: ["suggestedUsers", isLoggedIn],
+  queryFn: getSuggestedUsers,
+});
+
+
 
   // WHO I FOLLOW (for "Following" state in cards)
   const { data: myFollowingUsernames } = useQuery<string[]>({
