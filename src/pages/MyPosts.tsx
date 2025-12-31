@@ -68,30 +68,36 @@ export default function MyPosts() {
               <div key={post.id} className="relative">
                 <PostCard post={post} />
                 <div className="absolute right-0 top-2 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <Link to={`/post/${post.id}`}>View</Link>
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          "Are you sure you want to delete this story?"
-                        )
-                      ) {
-                        deleteMutation.mutate(post.id);
-                      }
-                    }}
-                    disabled={deleteMutation.isLoading}
-                  >
-                    Delete
-                  </Button>
-                </div>
+  <Button
+    variant="outline"
+    size="sm"
+    asChild
+  >
+    <Link to={`/post/${post.id}`}>View</Link>
+  </Button>
+
+  <Button
+    variant="outline"
+    size="sm"
+    asChild
+  >
+    <Link to={`/post/${post.id}/edit`}>Edit</Link>
+  </Button>
+
+  <Button
+    variant="destructive"
+    size="sm"
+    onClick={() => {
+      if (window.confirm("Are you sure you want to delete this story?")) {
+        deleteMutation.mutate(post.id);
+      }
+    }}
+    disabled={deleteMutation.isLoading}
+  >
+    Delete
+  </Button>
+</div>
+
               </div>
             ))}
           </div>

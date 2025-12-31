@@ -18,25 +18,52 @@ import { Visibility, EntryRequest } from "@/types/api";
 import { createEntry } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-export default function WritePost() {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+/* =====================================================
+   Props
+===================================================== */
+interface WritePostProps {
+  editMode?: boolean;
+  initialData?: {
+    title: string;
+    content: string;
+    tags: string[];
+    visibility: Visibility;
+    imageUrls?: string[];
+  };
+  onSubmit?: (payload: EntryRequest) => Promise<void> | void;
+}
+
+export default function WritePost({
+  editMode = false,
+  initialData,
+  onSubmit,
+}: WritePostProps) {
+  /* =====================================================
+     State
+  ===================================================== */
+  const [title, setTitle] = useState(initialData?.title ?? "");
+  const [content, setContent] = useState(initialData?.content ?? "");
   const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [visibility, setVisibility] = useState<Visibility>("PUBLIC");
+  const [tags, setTags] = useState<string[]>(initialData?.tags ?? []);
+  const [visibility, setVisibility] = useState<Visibility>(
+    initialData?.visibility ?? "PUBLIC"
+  );
+
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // cover image state
-  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  // cover image
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(
+    initialData?.imageUrls?.[0] ?? null
+  );
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // ------------------------
-  // Tag handlers
-  // ------------------------
+  /* =====================================================
+     Tag handlers
+  ===================================================== */
   const handleAddTag = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
@@ -52,9 +79,9 @@ export default function WritePost() {
     setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
   };
 
-  // ------------------------
-  // Cover image handlers
-  // ------------------------
+  /* =====================================================
+     Cover image handlers
+  ===================================================== */
   const handleCoverClick = () => {
     fileInputRef.current?.click();
   };
@@ -66,8 +93,6 @@ export default function WritePost() {
     try {
       setIsUploadingCover(true);
 
-      // ⬇️ client-side Cloudinary upload
-      // configure via environment variables
       const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string;
       const uploadPreset = import.meta.env
         .VITE_CLOUDINARY_UPLOAD_PRESET as string;
@@ -78,37 +103,26 @@ export default function WritePost() {
 
       const res = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
+        { method: "POST", body: formData }
       );
 
-      if (!res.ok) {
-        throw new Error("Failed to upload image");
-      }
+      if (!res.ok) throw new Error("Image upload failed");
 
       const data = await res.json();
-      const url = data.secure_url as string;
+      setCoverImageUrl(data.secure_url);
 
-      setCoverImageUrl(url);
       toast({
         title: "Cover image uploaded",
-        description: "Your cover image has been added.",
       });
     } catch (err) {
-      console.error(err);
       toast({
         title: "Upload failed",
-        description: "Could not upload cover image. Please try again.",
+        description: "Could not upload cover image.",
         variant: "destructive",
       });
     } finally {
       setIsUploadingCover(false);
-      // reset input so the same file can be selected again if needed
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -116,9 +130,9 @@ export default function WritePost() {
     setCoverImageUrl(null);
   };
 
-  // ------------------------
-  // Publish
-  // ------------------------
+  /* =====================================================
+     Publish / Update
+  ===================================================== */
   const handlePublish = async () => {
     if (!title.trim() || !content.trim()) return;
 
@@ -133,19 +147,19 @@ export default function WritePost() {
         imageUrls: coverImageUrl ? [coverImageUrl] : [],
       };
 
-      const entry = await createEntry(payload);
-
-      toast({
-        title: "Story published",
-        description: "Your story is now live on DailyBook.",
-      });
-
-      navigate(`/post/${entry.id}`);
+      if (editMode && onSubmit) {
+        await onSubmit(payload);
+        toast({ title: "Story updated successfully" });
+      } else {
+        const entry = await createEntry(payload);
+        toast({ title: "Story published" });
+        navigate(`/post/${entry.id}`);
+        return;
+      }
     } catch (err) {
-      console.error(err);
       toast({
-        title: "Publishing failed",
-        description: "Something went wrong while publishing your story.",
+        title: editMode ? "Update failed" : "Publish failed",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -153,6 +167,9 @@ export default function WritePost() {
     }
   };
 
+  /* =====================================================
+     Render
+  ===================================================== */
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -165,35 +182,42 @@ export default function WritePost() {
               </Link>
             </Button>
             <span className="font-serif text-xl font-bold text-foreground">
-              DailyBook
+              {editMode ? "Edit Story" : "Write Story"}
             </span>
           </div>
+
           <div className="flex items-center gap-3">
             <Select
               value={visibility}
               onValueChange={(value: Visibility) => setVisibility(value)}
             >
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="Visibility" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="PUBLIC">Public</SelectItem>
-                <SelectItem value="FOLLOWERS_ONLY">Followers Only</SelectItem>
+                <SelectItem value="FOLLOWERS_ONLY">
+                  Followers Only
+                </SelectItem>
                 <SelectItem value="PRIVATE">Private</SelectItem>
               </SelectContent>
             </Select>
+
             <Button
               onClick={handlePublish}
               disabled={
-                !title.trim() || !content.trim() || isPublishing || isUploadingCover
+                !title.trim() ||
+                !content.trim() ||
+                isPublishing ||
+                isUploadingCover
               }
             >
               {isPublishing ? (
-                "Publishing..."
+                editMode ? "Updating..." : "Publishing..."
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Publish
+                  {editMode ? "Update" : "Publish"}
                 </>
               )}
             </Button>
@@ -201,7 +225,7 @@ export default function WritePost() {
         </div>
       </header>
 
-      {/* Hidden file input for cover */}
+      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -218,30 +242,22 @@ export default function WritePost() {
             <button
               type="button"
               onClick={handleCoverClick}
-              className="w-full h-48 rounded-lg border-2 border-dashed border-border hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground relative overflow-hidden"
+              className="w-full h-48 rounded-lg border-2 border-dashed border-border hover:border-primary/50 transition flex items-center justify-center relative overflow-hidden"
             >
               {coverImageUrl ? (
-                <>
-                  <img
-                    src={coverImageUrl}
-                    alt="Cover"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <span className="text-sm text-white">
-                      Click to change cover image
-                    </span>
-                  </div>
-                </>
+                <img
+                  src={coverImageUrl}
+                  alt="Cover"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
               ) : (
-                <>
+                <div className="text-muted-foreground flex flex-col items-center">
                   <ImagePlus className="h-8 w-8" />
-                  <span className="text-sm">
-                    {isUploadingCover ? "Uploading..." : "Add a cover image"}
-                  </span>
-                </>
+                  <span>Add a cover image</span>
+                </div>
               )}
             </button>
+
             {coverImageUrl && (
               <button
                 type="button"
@@ -256,25 +272,19 @@ export default function WritePost() {
 
           {/* Title */}
           <Input
-            type="text"
             placeholder="Your story title..."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="border-0 bg-transparent font-serif text-4xl font-bold placeholder:text-muted-foreground/50 focus-visible:ring-0 px-0 mb-6"
+            className="border-0 bg-transparent font-serif text-4xl font-bold px-0 mb-6 focus-visible:ring-0"
           />
 
           {/* Tags */}
           <div className="mb-6">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="flex flex-wrap gap-2 mb-2">
               {tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="flex items-center gap-1"
-                >
+                <Badge key={tag} variant="secondary">
                   {tag}
                   <button
-                    type="button"
                     onClick={() => handleRemoveTag(tag)}
                     className="ml-1 hover:text-destructive"
                   >
@@ -284,17 +294,16 @@ export default function WritePost() {
               ))}
               {tags.length < 5 && (
                 <Input
-                  type="text"
-                  placeholder="Add tags (press Enter)"
+                  placeholder="Add tag"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={handleAddTag}
-                  className="border-0 bg-transparent w-40 px-0 text-sm focus-visible:ring-0"
+                  className="border-0 bg-transparent w-40 px-0 focus-visible:ring-0"
                 />
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Add up to 5 tags to help readers find your story
+              Up to 5 tags
             </p>
           </div>
 
@@ -303,7 +312,7 @@ export default function WritePost() {
             placeholder="Tell your story..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="min-h-[500px] border-0 bg-transparent font-serif text-lg leading-relaxed placeholder:text-muted-foreground/50 focus-visible:ring-0 px-0 resize-none"
+            className="min-h-[500px] border-0 bg-transparent font-serif text-lg px-0 focus-visible:ring-0 resize-none"
           />
         </div>
       </main>

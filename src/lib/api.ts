@@ -221,6 +221,16 @@ export async function createEntry(
     body: payload,
   });
 }
+export async function updateEntry(
+  id: string,
+  payload: EntryRequest
+): Promise<EntryResponse> {
+  return apiRequest<EntryResponse>(`${ApiRoutes.ENTRIES}/${id}`, {
+    method: "PUT", // or PATCH if your backend uses PATCH
+    body: payload,
+  });
+}
+
 
 export async function getMyEntries(): Promise<GetMyEntriesResponse> {
   return apiRequest<GetMyEntriesResponse>(ApiRoutes.ENTRIES);
