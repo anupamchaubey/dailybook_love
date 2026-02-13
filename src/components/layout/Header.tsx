@@ -34,7 +34,7 @@ export function Header() {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <span className="font-serif text-2xl font-bold tracking-tight text-foreground">
-            DailyBook ✧˚ ༘⋆2026✧˚ ༘ ⋆
+            DailyBook 
           </span>
         </Link>
 
